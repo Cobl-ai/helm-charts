@@ -632,6 +632,7 @@ spec:
               readOnly: true
             - name: host-var-lib-docker
               mountPath: /var/lib/docker
+              readOnly: true
             - name: logs
               mountPath: /home/daytona/runner
             - name: ssh-keys
