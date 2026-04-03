@@ -514,7 +514,7 @@ services:
       SSH_GATEWAY_PORT: "2220"
       RESOURCE_LIMITS_DISABLED: "false"
       CACHE_RETENTION_DAYS: "7"
-      DAEMON_START_TIMEOUT_SEC: "30"
+      DAEMON_START_TIMEOUT_SEC: "120"
       SANDBOX_START_TIMEOUT_SEC: "60"
       # Secrets
       DAYTONA_API_URL: "http://daytona-api:3000/api"

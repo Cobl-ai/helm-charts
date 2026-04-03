@@ -177,6 +177,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "daytona.secretName" . }}-ssh
                   key: API_KEY
+            {{- else }}
+            # sshGateway disabled — still set SSH_GATEWAY_API_KEY to avoid
+            # configService.getOrThrow("sshGateway.apiKey") crashing all auth
+            - name: SSH_GATEWAY_API_KEY
+              value: ""
             {{- end }}
             # Harbor Registry Configuration
             {{- if .Values.harbor.enabled }}
@@ -234,27 +239,28 @@ spec:
             {{- end }}
             # OIDC Configuration
             {{- if .Values.dex.enabled }}
-            # Dex is enabled - use Dex configuration
+            # Dex is enabled - use internal URL for API OIDC discovery, external URL for browser redirects
             {{- $dexHostname := .Values.dex.ingress.hostname | default (printf "dex.%s" .Values.baseDomain) -}}
             {{- $templatedDexHostname := tpl $dexHostname $ -}}
-            {{- $dexIssuerUrl := "" -}}
-            {{- if .Values.dex.config.issuer -}}
-              {{- $dexIssuerUrl = .Values.dex.config.issuer -}}
-            {{- else if and .Values.dex.enabled .Values.dex.ingress.enabled -}}
-              {{- $dexIssuerUrl = printf "https://%s/dex" $templatedDexHostname -}}
-            {{- else -}}
-              {{- $dexIssuerUrl = printf "http://%s-dex:%s/dex" (include "daytona.fullname" .) (.Values.dex.service.port | default 5556 | toString) -}}
-            {{- end }}
+            {{- /* OIDC_ISSUER_BASE_URL: always use in-cluster service URL so the API pod
+                   can fetch OIDC config without TLS issues (e.g. Let's Encrypt certs
+                   not in the container's CA bundle). The JwtStrategy factory uses this
+                   for discovery and replaces PUBLIC_OIDC_DOMAIN in jwks_uri. */ -}}
+            {{- $dexInternalUrl := printf "http://%s-dex:%s/dex" (include "daytona.fullname" .) (.Values.dex.service.port | default 5556 | toString) -}}
+            {{- /* PUBLIC_OIDC_DOMAIN: the external-facing URL used by the dashboard for
+                   browser OIDC redirects and by JwtStrategy for jwks_uri rewriting. */ -}}
             {{- $dexPublicUrl := "" -}}
-            {{- if and .Values.dex.enabled .Values.dex.ingress.enabled -}}
+            {{- if .Values.dex.config.issuer -}}
+              {{- $dexPublicUrl = .Values.dex.config.issuer -}}
+            {{- else if and .Values.dex.enabled .Values.dex.ingress.enabled -}}
               {{- $dexPublicUrl = printf "https://%s/dex" $templatedDexHostname -}}
             {{- else -}}
-              {{- $dexPublicUrl = "http://localhost:5556/dex" -}}
+              {{- $dexPublicUrl = $dexInternalUrl -}}
             {{- end }}
             - name: OIDC_CLIENT_ID
               value: {{ .Values.dex.config.clientId | default "daytona" | quote }}
             - name: OIDC_ISSUER_BASE_URL
-              value: {{ $dexIssuerUrl | quote }}
+              value: {{ $dexInternalUrl | quote }}
             - name: PUBLIC_OIDC_DOMAIN
               value: {{ $dexPublicUrl | quote }}
             - name: OIDC_AUDIENCE

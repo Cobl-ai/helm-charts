@@ -164,6 +164,9 @@ spec:
                 secretKeyRef:
                   name: {{ include "daytona.secretName" . }}-ssh
                   key: API_KEY
+            {{- else }}
+            - name: SSH_GATEWAY_API_KEY
+              value: ""
             {{- end }}
             # Harbor Registry Configuration
             {{- if .Values.harbor.enabled }}
@@ -221,27 +224,21 @@ spec:
             {{- end }}
             # OIDC Configuration
             {{- if .Values.dex.enabled }}
-            # Dex is enabled - use Dex configuration
             {{- $dexHostname := .Values.dex.ingress.hostname | default (printf "dex.%s" .Values.baseDomain) -}}
             {{- $templatedDexHostname := tpl $dexHostname $ -}}
-            {{- $dexIssuerUrl := "" -}}
-            {{- if .Values.dex.config.issuer -}}
-              {{- $dexIssuerUrl = .Values.dex.config.issuer -}}
-            {{- else if and .Values.dex.enabled .Values.dex.ingress.enabled -}}
-              {{- $dexIssuerUrl = printf "https://%s/dex" $templatedDexHostname -}}
-            {{- else -}}
-              {{- $dexIssuerUrl = printf "http://%s-dex:%s/dex" (include "daytona.fullname" .) (.Values.dex.service.port | default 5556 | toString) -}}
-            {{- end }}
+            {{- $dexInternalUrl := printf "http://%s-dex:%s/dex" (include "daytona.fullname" .) (.Values.dex.service.port | default 5556 | toString) -}}
             {{- $dexPublicUrl := "" -}}
-            {{- if and .Values.dex.enabled .Values.dex.ingress.enabled -}}
+            {{- if .Values.dex.config.issuer -}}
+              {{- $dexPublicUrl = .Values.dex.config.issuer -}}
+            {{- else if and .Values.dex.enabled .Values.dex.ingress.enabled -}}
               {{- $dexPublicUrl = printf "https://%s/dex" $templatedDexHostname -}}
             {{- else -}}
-              {{- $dexPublicUrl = "http://localhost:5556/dex" -}}
+              {{- $dexPublicUrl = $dexInternalUrl -}}
             {{- end }}
             - name: OIDC_CLIENT_ID
               value: {{ .Values.dex.config.clientId | default "daytona" | quote }}
             - name: OIDC_ISSUER_BASE_URL
-              value: {{ $dexIssuerUrl | quote }}
+              value: {{ $dexInternalUrl | quote }}
             - name: PUBLIC_OIDC_DOMAIN
               value: {{ $dexPublicUrl | quote }}
             - name: OIDC_AUDIENCE

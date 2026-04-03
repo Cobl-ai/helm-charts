@@ -575,7 +575,7 @@ spec:
             - name: CACHE_RETENTION_DAYS
               value: {{ .Values.services.runner.env.CACHE_RETENTION_DAYS | default "7" | quote }}
             - name: DAEMON_START_TIMEOUT_SEC
-              value: {{ .Values.services.runner.env.DAEMON_START_TIMEOUT_SEC | default "30" | quote }}
+              value: {{ .Values.services.runner.env.DAEMON_START_TIMEOUT_SEC | default "120" | quote }}
             - name: SANDBOX_START_TIMEOUT_SEC
               value: {{ .Values.services.runner.env.SANDBOX_START_TIMEOUT_SEC | default "60" | quote }}
             # Secrets
